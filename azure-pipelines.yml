@@ -1,2 +1,63 @@
 pool:
-  vmImage: "Ubuntu-16.04"
+  vmImage: 'Ubuntu-16.04'
+  demands:
+    - npm
+
+variables:
+  buildConfiguration: 'Release'
+  wwwrootDir: 'Tailspin.SpaceGame.Web/wwwroot'
+  dotnetSDKVersion: '2.1.505'
+
+steps:
+  - task: DotNetCoreInstaller@0
+    displayName: 'Use .NET Core SDK $(dotnetSDKVersion)'
+    inputs:
+      version: $(dotnetSDKVersion)
+
+  - task: Npm@1
+    displayName: 'Run npm install'
+    inputs:
+      verbose: false
+
+  - script: './node_modules/.bin/node-sass $(wwwrootDir) --output $(wwwrootDir)'
+    displayName: 'Compile Saas assets'
+
+  - task: Gulp@1
+    displayName: 'Run gulp tasks'
+
+  - script: 'echo "$(Build.DefinitionName), $(Build.BuildId), $(Build.BuildNumber)" > buildinfo.txt'
+    displayName: 'Write Build  information'
+    workingDirectory: $(wwwrootDir)
+
+  - task: DotNetCoreCLI@2
+    displayName: 'Restore Project dependencies'
+    inputs:
+      command: restore
+      projects: '**/*.csproj'
+
+  # - task: DotNetCoreCLI@2
+  #   displayName: 'Build the Project - $(buildConfiguration)'
+  #   inputs:
+  #     command: build
+  #     arguments: '--no-restore --configuration $(buildConfiguration)'
+  #     projects: '**/*.csproj'
+
+  # - task: DotNetCoreCLI@2
+  #   displayName: 'Publish the project - $(buildConfiguration)'
+  #   inputs:
+  #     command: publish
+  #     publishWebProjects: false
+  #     arguments: '--no-build --configuration $(buildConfiguration) --output $(Build.ArtifactStagingDirectory)/$(buildConfiguration)'
+  #     zipAfterPublish: true
+
+  - template: templates/build.yml
+    parameters:
+      buildConfiguration: 'Debug'
+
+  - template: templates/build.yml
+    parameters:
+      buildConfiguration: 'Release'
+
+  - task: PublishBuildArtifacts@1
+    displayName: 'Publish Artifact : Drop'
+    condition: succeeded()
