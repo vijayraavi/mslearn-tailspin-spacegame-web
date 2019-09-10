@@ -39,7 +39,7 @@ steps:
   displayName: 'Prepare SonarCloud analysis'
   inputs:
     SonarCloud: 'SonarCloud Connection1'
-    organization: 'vijayraavi'
+    organization: 'vijayraavi vijayraavi'
     scannerMode: 'MSBuild'
     projectKey: '$(projectkey)'
     projectName: '$(projectName)'
