@@ -38,21 +38,28 @@ steps:
 - task: SonarCloudPrepare@1
   displayName: 'Prepare SonarCloud analysis'
   inputs:
-    SonarCloud: 'SonarCloud connection 1'
+    SonarCloud: 'SonarCloud Connection1'
     organization: '$(organization)'
-    projectKey: '$(projectKey)'
+    scannerMode: 'MSBuild'
+    projectKey: '$(projectkey)'
     projectName: '$(projectName)'
     projectVersion: '$(Build.BuildNumber)'
     extraProperties: |
-     sonar.cs.opencover.reportsPaths=$(Build.SourcesDirectory)/TestResults/Coverage/coverage.opencover.xml
-     sonar.exclusions=**/wwwroot/lib/**/*
-
+      sonar.cs.opencover.reportsPaths=$(Build.SourcesDirectory)/TestResults/Coverage/coverage.opencover.xml
+      sonar.exclusions=**/wwwroot/lib/**/*
+ condition: |
+    and
+    (
+        succeeded(),
+        eq(variables['Build.Reason'],'PullRequest'),
+        eq(variables['System.PullRequest.TargetBranch'],'master')
+    )
 - task: DotNetCoreCLI@2
   displayName: 'Build the project - $(buildConfiguration)'
   inputs:
     command: 'build'
     arguments: '--no-restore --configuration $(buildConfiguration)'
-    projects: '**/*.csproj'
+    projects: '**/*.csproj' 
 
 - task: DotNetCoreCLI@2
   displayName: 'Install ReportGenerator'
@@ -72,17 +79,28 @@ steps:
 - script: |
     reportgenerator -reports:$(Build.SourcesDirectory)/**/coverage.cobertura.xml -targetdir:$(Build.SourcesDirectory)/CodeCoverage -reporttypes:HtmlInline_AzurePipelines
   displayName: 'Create code coverage report'
-
 - task: SonarCloudAnalyze@1
-  displayName: 'Run SonarCloud code analysis'
-
+  displayName: 'Run Code analysis'
+  condition: |
+  and
+  (
+      succeeded(),
+      eq(variables['Build.Reason'],'PullRequest'),
+      eq(variables['System.PullRequest.TargetBranch'],'master')
+  )
 - task: SonarCloudPublish@1
   displayName: 'Publish SonarCloud quality gate results'
-
+  condition: |
+  and
+  (
+      succeeded(),
+      eq(variables['Build.Reason'],'PullRequest'),
+      eq(variables['System.PullRequest.TargetBranch'],'master')
+  )
 - task: PublishCodeCoverageResults@1
   displayName: 'Publish code coverage report'
   inputs:
-    codeCoverageTool: 'cobertura'
+    codeCoverageTool: 'Cobertura'
     summaryFileLocation: '$(Build.SourcesDirectory)/**/coverage.cobertura.xml'
 
 - task: DotNetCoreCLI@2
